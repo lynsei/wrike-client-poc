@@ -11,7 +11,8 @@ import (
 )
 
 type refreshResponse struct {
-	refreshToken string
+	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`
 }
 
 type specification struct {
@@ -81,24 +82,19 @@ func refreshAuthToken() {
 		log.Fatal("Error reading response body during refresh of token: ", err)
 	}
 
-	// needs to reassign refresh token
-	// refreshToken = something from body
-	log.Println(string(contents))
-
 	err = json.Unmarshal([]byte(contents), &refreshJSON)
 
 	if err != nil {
 		log.Fatal("Error unmarshalling: ", err)
 	}
 
-	log.Println("json parsed[refreshToken] is: " + refreshJSON.refreshToken)
+	s.WrikeRefreshToken = refreshJSON.RefreshToken
+	s.WrikeBearer = refreshJSON.AccessToken
 }
 
 func makeRefreshBody() string {
 	body := "client_id=" + s.WrikeClientID + "&client_secret=" + s.WrikeClientSecret
 	body += "&grant_type=refresh_token&refresh_token=" + s.WrikeRefreshToken
-
-	log.Println("Body is " + body)
 
 	return body
 }
