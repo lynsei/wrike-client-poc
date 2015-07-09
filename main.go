@@ -31,7 +31,43 @@ func main() {
 
 	refreshAuthToken()
 
-	exampleRequest()
+	getRecentTasks()
+
+	if 1 == 0 { // hilariously bad debug hack
+		exampleRequest()
+	}
+}
+
+func getRecentTasks() {
+	log.Println("Getting recent tasks")
+	client := &http.Client{}
+
+	var url = "https://www.wrike.com/api/v3/tasks"
+	url += "?createdDate={\"start\":\"2015-07-08T18:10:40Z\"}"
+
+	req, err := http.NewRequest("GET", url, nil)
+	req.Header.Add("Authorization", "bearer "+s.WrikeBearer)
+
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
+	if err != nil {
+		log.Println("Client Error: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		log.Println("Didn't get a 200 on tasks requests, getting new token")
+		// assume invalid auth token and refresh, I suppose
+		refreshAuthToken()
+		// try again
+	}
+
+	contents, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body: ", err)
+	}
+	log.Println(string(contents))
 }
 
 func exampleRequest() {
