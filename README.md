@@ -8,6 +8,8 @@ Talking to the Wrike API.
 export WRIKECLIENTPOC_WRIKEBEARER="token_here"
 export WRIKECLIENTPOC_WRIKECLIENTID="id"
 export WRIKECLIENTPOC_WRIKECLIENTSECRET="secret"
+export WRIKECLIENTPOC_WRIKEREFRESHTOKEN="token"
+export WRIKECLIENTPOC_SLACKURL="slack url"
 ```
 
 The bearer token will be added to the Authorization HTTP header with the format "bearer token_here".

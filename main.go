@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/kelseyhightower/envconfig"
@@ -15,19 +16,34 @@ type refreshResponse struct {
 	AccessToken  string `json:"access_token"`
 }
 
+type wrikeTaskResponse struct {
+	Tasks []wrikeTask `json:"data"`
+}
+
+type wrikeTask struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	Status    string `json:"status"`
+	Permalink string `json:"permalink"`
+}
+
 type specification struct {
 	WrikeBearer       string
 	WrikeClientID     string
 	WrikeClientSecret string
 	WrikeRefreshToken string // temp for testing: should get this from response later
+	SlackURL          string
 }
 
 var (
-	s specification
+	s          specification
+	wrikeTasks wrikeTaskResponse
 )
 
 func main() {
 	setup()
+
+	// sendToSlack("check check mic check")
 
 	refreshAuthToken()
 
@@ -38,12 +54,37 @@ func main() {
 	}
 }
 
+func sendToSlack(slackMessage string) {
+	data := url.Values{}
+	payloadBody := "{\"channel\": \"#dev-null\", \"username\": \"hook it up\", \"text\": \"" + slackMessage + "\", \"icon_emoji\": \":ghost:\"}"
+	data.Set("payload", payloadBody)
+
+	log.Println("sending body: " + payloadBody)
+	log.Println("sending encoded body: " + data.Encode())
+
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", s.SlackURL, strings.NewReader(data.Encode()))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded") // this is what curl -d sends by default
+
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
+	if err != nil {
+		log.Println("Client Error on Slackchat: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		log.Fatal("Got response code " + resp.Status)
+	}
+}
+
 func getRecentTasks() {
 	log.Println("Getting recent tasks")
 	client := &http.Client{}
 
 	var url = "https://www.wrike.com/api/v3/tasks"
-	url += "?createdDate={\"start\":\"2015-07-08T18:10:40Z\"}"
+	url += "?createdDate={\"start\":\"2015-07-09T21:28:00Z\"}"
 
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", "bearer "+s.WrikeBearer)
@@ -59,7 +100,7 @@ func getRecentTasks() {
 	if resp.StatusCode != 200 {
 		log.Println("Didn't get a 200 on tasks requests, getting new token")
 		// assume invalid auth token and refresh, I suppose
-		refreshAuthToken()
+		// refreshAuthToken()
 		// try again
 	}
 
@@ -67,7 +108,17 @@ func getRecentTasks() {
 	if err != nil {
 		log.Fatal("Error reading response body: ", err)
 	}
-	log.Println(string(contents))
+
+	err = json.Unmarshal([]byte(contents), &wrikeTasks)
+
+	if err != nil {
+		log.Fatal("Error unmarshalling wrike tasks: ", err)
+	}
+
+	log.Println("hey found json! first title is ", wrikeTasks.Tasks[0].Title)
+
+	log.Println("sending to slack: " + wrikeTasks.Tasks[0].Title)
+	sendToSlack(wrikeTasks.Tasks[0].Title + " at " + wrikeTasks.Tasks[0].Permalink)
 }
 
 func exampleRequest() {
@@ -145,4 +196,5 @@ func setup() {
 	log.Println("client is " + s.WrikeClientID)
 	log.Println("secret is " + s.WrikeClientSecret)
 	log.Println("refresh is " + s.WrikeRefreshToken)
+	log.Println("slack url is " + s.SlackURL)
 }
