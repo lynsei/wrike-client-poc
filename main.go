@@ -2,46 +2,49 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
 
-	"golang.org/x/oauth2"
+	"github.com/kelseyhightower/envconfig"
 )
 
-func main() {
-	log.Println("yay")
-
-	exampleConfig()
+type specification struct {
+	WrikeBearer string
 }
 
-func exampleConfig() {
-	conf := &oauth2.Config{
-		ClientID:     "YOUR_CLIENT_ID",
-		ClientSecret: "YOUR_CLIENT_SECRET",
-		Scopes:       []string{"SCOPE1", "SCOPE2"},
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://provider.com/o/oauth2/auth",
-			TokenURL: "https://provider.com/o/oauth2/token",
-		},
-	}
+var s specification
 
-	// Redirect user to consent page to ask for permission
-	// for the scopes specified above.
-	url := conf.AuthCodeURL("state", oauth2.AccessTypeOffline)
-	fmt.Printf("Visit the URL for the auth dialog: %v", url)
+func main() {
+	setup()
+	exampleRequest()
+}
 
-	// Use the authorization code that is pushed to the redirect URL.
-	// NewTransportWithCode will do the handshake to retrieve
-	// an access token and initiate a Transport that is
-	// authorized and authenticated by the retrieved token.
-	var code string
-	if _, err := fmt.Scan(&code); err != nil {
-		log.Fatal(err)
-	}
-	tok, err := conf.Exchange(oauth2.NoContext, code)
+func exampleRequest() {
+	client := &http.Client{}
+
+	req, err := http.NewRequest("GET", "https://www.wrike.com/api/v3/accounts", nil)
+	req.Header.Add("Authorization", "bearer "+s.WrikeBearer)
+
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Client Error: ", err)
+		return
 	}
+	contents, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("%s", err)
+		os.Exit(1)
+	}
+	log.Println(string(contents))
+}
 
-	client := conf.Client(oauth2.NoContext, tok)
-	client.Get("...")
+func setup() {
+	err := envconfig.Process("wrikeclientpoc", &s)
+	if err != nil {
+		log.Fatal("boo: ", err.Error())
+	}
 }
