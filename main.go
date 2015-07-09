@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -36,8 +34,7 @@ func exampleRequest() {
 	}
 	contents, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("%s", err)
-		os.Exit(1)
+		log.Fatal("Error reading response body: ", err)
 	}
 	log.Println(string(contents))
 }
