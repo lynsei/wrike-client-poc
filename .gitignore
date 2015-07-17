@@ -25,3 +25,6 @@ _testmain.go
 
 # binary output
 wrike-client-poc
+
+# vagrant
+.vagrant/
