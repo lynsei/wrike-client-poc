@@ -1,13 +1,23 @@
 {
-  "builders": [{
-    "type": "docker",
-    "image": "ubuntu",
-    "commit": true
-  }],
+  "variables": {
+    "my_secret": "{{env `WRIKECLIENTPOC_WRIKEBEARER`}}"
+  },
+  "builders": [
+    {
+      "type": "docker",
+      "image": "ubuntu",
+      "commit": true
+    }
+  ],
   "provisioners": [
       {
         "type": "shell",
-        "inline": ["echo foo"]
+        "inline": ["echo 'WRIKECLIENTPOC_WRIKEBEARER is: {{user `my_secret`}} '"]
+      },
+      {
+        "type": "file",
+        "source": "main",
+        "destination": "/tmp/main"
       }
     ]
 }
